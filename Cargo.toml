@@ -1,0 +1,9 @@
+[package]
+name = "recipe_printer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+env_logger = "0.11.6"
+escpos = { version = "0.15.0", features = ["barcodes", "codes_2d", "usb"] }
+json = "0.12.4"
