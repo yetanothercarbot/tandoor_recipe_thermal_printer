@@ -4,10 +4,8 @@ use escpos::{driver::*, errors::Result};
 use std::path::Path;
 use std::fs;
 use std::process::exit;
-// use std::env;
 use serde_json::*;
 use serde_json::Value::Array;
-// use json::JsonValue::Array;
 use clap::Parser;
 use std::collections::HashMap;
 
@@ -32,9 +30,9 @@ struct Arguments {
     #[arg(short, long)]
     token: Option<String>,
 
-    // /// Printer path
-    // #[arg(long, default_value_t="/dev/usb/lp0")]
-    // printer_path: String,
+    /// Printer path
+    #[arg(long, default_value_t=String::from("/dev/usb/lp0"))]
+    printer_path: String,
 }
 
 fn auth(args: &Arguments) -> String {
@@ -60,6 +58,15 @@ fn auth(args: &Arguments) -> String {
         
         match resp {
             Ok(r) => {
+                if r.status().is_success() {
+                    let response: String = r.text().unwrap();
+                    let authorisation: Value = serde_json::from_str(&response).expect("Malformed authorisation");
+                    println!("Received token {}", &authorisation["token"].as_str().unwrap());
+                    return authorisation["token"].as_str().unwrap().to_string();
+                } else {
+                    println!("Unable to authenticate!");
+                    exit(2);
+                }
                 // println!("{}", r.json().expect("No body")["token"]);
             },
             Err(e) => {
@@ -89,11 +96,10 @@ fn retrieve_recipe(tok: String, id: u16) -> Value {
 
 fn main() -> Result<()> {
     let args = Arguments::parse();
-    // let tok = auth(&args);
+    let tok = auth(&args);
 
-    // exit(0);
-
-    let recipe = retrieve_recipe("abcd".to_string(), args.id);
+    exit(0);
+    let recipe = retrieve_recipe(tok, args.id);
 
     println!("Recipe: {}", recipe["name"]);
 
