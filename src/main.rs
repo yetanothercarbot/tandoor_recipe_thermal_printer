@@ -2,7 +2,6 @@ use escpos::printer::Printer;
 use escpos::utils::*;
 use escpos::{driver::*, errors::Result};
 use std::path::Path;
-use std::fs;
 use std::process::exit;
 use serde_json::*;
 use serde_json::Value::Array;
@@ -122,7 +121,7 @@ fn main() -> Result<()> {
 
     println!("Recipe: {}", recipe["name"]);
 
-    let path = Path::new("/dev/usb/lp0");
+    let path = Path::new(&args.printer_path);
     let driver = FileDriver::open(&path).unwrap();
     let mut printer = Printer::new(driver.clone(), Protocol::default(), None);
     printer.init().unwrap();
