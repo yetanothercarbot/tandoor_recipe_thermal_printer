@@ -70,7 +70,7 @@ fn auth(args: &Arguments) -> String {
                 // println!("{}", r.json().expect("No body")["token"]);
             },
             Err(e) => {
-                println!("Error: {}", e);
+                println!("Network/Auth Error: {}", e);
                 exit(2);
             }
         }
@@ -86,20 +86,39 @@ fn auth(args: &Arguments) -> String {
     exit(1);
 }
 
-fn retrieve_recipe(tok: String, id: u16) -> Value {
-    let file_path = Path::new("./test.json");
-    let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
+fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
+    // let file_path = Path::new("./test.json");
+    // let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
-    // println!("{contents}");
-    serde_json::from_str(&contents).expect("Malformed recipe")
+    // serde_json::from_str(&contents).expect("Malformed recipe")
+    let recipe_client = reqwest::blocking::Client::new();
+
+    let resp = recipe_client.post(format!("{}/api/recipe/{}", args.instance, args.id))
+        .header("Authorization", format!("Bearer {tok}"))
+        .send();
+
+    match resp {
+        Ok(r) => {
+            if r.status().is_success() {
+                let response = r.text().unwrap();
+                return serde_json::from_str(&response).expect("Malformed recipe");
+            } else {
+                println!("Got HTTP failure - is Tandoor running?");
+                exit(2);
+            }
+        }
+        Err(e) => {
+            println!("Network/Auth Error: {}", e);
+            exit(2);
+        }
+    }
 }
 
 fn main() -> Result<()> {
     let args = Arguments::parse();
     let tok = auth(&args);
 
-    exit(0);
-    let recipe = retrieve_recipe(tok, args.id);
+    let recipe = retrieve_recipe(&args, tok);
 
     println!("Recipe: {}", recipe["name"]);
 
@@ -116,7 +135,7 @@ fn main() -> Result<()> {
     let steps;
     match &recipe["steps"] {
         Array(val) => {steps = val},
-        _ => {exit(2)}
+        _ => {exit(3)}
     }
 
     let mut step_no = 0;
