@@ -4,6 +4,14 @@ This is a basic CLI app that pulls recipes from an instance of [Tandoor Recipes]
 
 ![Example receipt printed](sample.png)
 
+## Why?
+Mainly for fun :)
+
+It does have a few benefits over Tandoor's native printing output:
+- Space (the image tends to be very large)
+- Entertainment value
+- Single piece of paper - no more shuffling papers or flipping over to follow instructions.
+
 ## Usage
 Binaries for Linux can be downloaded from the releases tab. 
 
