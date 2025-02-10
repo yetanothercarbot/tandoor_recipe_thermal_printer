@@ -5,6 +5,8 @@ This is a basic CLI app that pulls recipes from an instance of [Tandoor Recipes]
 ![Example receipt printed](sample.png)
 
 ## Usage
+Binaries for Linux can be downloaded from the releases tab. 
+
 Generally, you will want to invoke the application as such:
 
 ```
