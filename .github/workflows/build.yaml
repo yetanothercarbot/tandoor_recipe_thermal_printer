@@ -14,7 +14,7 @@ jobs:
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: build
+          name: build_x86-64
           path: target/*-linux-musl/release/recipe_printer
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -36,7 +36,7 @@ jobs:
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: build
+          name: build_aarch64
           path: target/*-linux-musl/release/recipe_printer
       - name: Release
         uses: softprops/action-gh-release@v1
