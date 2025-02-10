@@ -66,7 +66,6 @@ fn auth(args: &Arguments) -> String {
                     println!("Unable to authenticate!");
                     exit(2);
                 }
-                // println!("{}", r.json().expect("No body")["token"]);
             },
             Err(e) => {
                 println!("Network/Auth Error: {}", e);
@@ -86,10 +85,6 @@ fn auth(args: &Arguments) -> String {
 }
 
 fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
-    // let file_path = Path::new("./test.json");
-    // let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
-
-    // serde_json::from_str(&contents).expect("Malformed recipe")
     let recipe_client = reqwest::blocking::Client::new();
 
     let resp = recipe_client.post(format!("{}/api/recipe/{}", args.instance, args.id))
@@ -174,16 +169,6 @@ fn main() -> Result<()> {
                     println!("{}", ingredient_str);
                     printer.writeln(&ingredient_str)?;
                 }
-                // if ingredient["conversions"].as_array().unwrap().len() > 0 {
-                //     println!("- {}{} {}", 
-                //         ingredient["conversions"][0]["amount"].as_number().unwrap(), 
-                //         ingredient["conversions"][0]["unit"].as_str().unwrap(), 
-                //         ingredient["conversions"][0]["food"].as_str().unwrap());
-                //     printer.writeln(&format!("- {}{} {}", 
-                //         ingredient["conversions"][0]["amount"].as_number().unwrap(), 
-                //         ingredient["conversions"][0]["unit"].as_str().unwrap(), 
-                //         ingredient["conversions"][0]["food"].as_str().unwrap()))?;
-                // }
             }
         }
         println!("{}", step["instruction"].as_str().unwrap());
