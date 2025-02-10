@@ -25,7 +25,7 @@ jobs:
           files: target/*-linux-musl/release/recipe_printer
   build_and_publish_aarch64:
     name: Build and publish aarch64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions: 
       contents: write
     steps:
