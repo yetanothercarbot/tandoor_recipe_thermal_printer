@@ -11,16 +11,22 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - run: cargo build --release --all-features
+          target: aarch64-unknown-linux-musl, x86_64-unknown-linux-musl
+      - run: cargo build --release --target aarch64-unknown-linux-musl --target-dir build_aarch64
+      - run: cargo build --release --target x86-64-unknown-linux-musl --target-dir build_x86-64
+      - run: cp build_aarch64/release/recipe_printer recipe_printer_aarch64
+      - run: cp build_x86-64/release/recipe_printer recipe_printer_x86-64
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: build
-          path: target/release/recipe_printer
+          path: recipe_printer_*
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: target/release/recipe_printer
+          files: |
+            recipe_printer_aarch64
+            recipe_printer_x86-64
