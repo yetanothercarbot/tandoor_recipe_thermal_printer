@@ -7,10 +7,7 @@ jobs:
     permissions: 
       contents: write
     steps:
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: musl-tools # provides musl-gcc
-          version: 1.0
+      - run: sudo apt install -y musl-tools
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
