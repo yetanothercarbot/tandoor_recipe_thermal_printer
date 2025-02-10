@@ -7,45 +7,41 @@ jobs:
     permissions: 
       contents: write
     steps:
+      - run: sudo apt install -y musl-tools musl-dev
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - run: cargo build --release
-      - run: cp target/release/recipe_printer recipe_printer_x86-64
+      - run: rustup target add x86_64-unknown-linux-musl
+      - run: cargo build --release --target x86_64-unknown-linux-musl
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: build_x86-64
-          path: recipe_printer_*
+          path: target/*-linux-musl/release/recipe_printer
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: recipe_printer_x86-64
+          files: target/*-linux-musl/release/recipe_printer
   build_and_publish_aarch64:
     name: Build and publish aarch64
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-22.04-arm
     permissions: 
       contents: write
     steps:
+      - run: sudo apt install -y musl-tools musl-dev
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - run: cargo build --release
-      - run: cp target/release/recipe_printer recipe_printer_aarch64
+      - run: rustup target add aarch64-unknown-linux-musl
+      - run: cargo build --release --target aarch64-unknown-linux-musl
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: build_aarch64
-          path: recipe_printer_aarch64
+          path: target/*-linux-musl/release/recipe_printer
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: recipe_printer_aarch64
+          files: target/*-linux-musl/release/recipe_printer
