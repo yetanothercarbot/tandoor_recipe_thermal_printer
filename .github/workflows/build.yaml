@@ -7,7 +7,6 @@ jobs:
     permissions: 
       contents: write
     steps:
-      - run: sudo apt install -y libssl-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
