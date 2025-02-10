@@ -15,7 +15,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: x86_64-linux-unknown-musl
+      - run: rustup target add x86_64-linux-unknown-musl
       - run: cargo build --release --target x86_64-linux-unknown-musl
       - run: cp target/release/recipe_printer recipe_printer_x86-64
       - name: Upload build
