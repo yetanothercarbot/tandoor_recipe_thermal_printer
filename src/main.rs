@@ -66,6 +66,7 @@ fn auth(args: &Arguments) -> String {
                     println!("Unable to authenticate!");
                     exit(2);
                 }
+                // println!("{}", r.json().expect("No body")["token"]);
             },
             Err(e) => {
                 println!("Network/Auth Error: {}", e);
@@ -85,6 +86,10 @@ fn auth(args: &Arguments) -> String {
 }
 
 fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
+    // let file_path = Path::new("./test.json");
+    // let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
+
+    // serde_json::from_str(&contents).expect("Malformed recipe")
     let recipe_client = reqwest::blocking::Client::new();
 
     let resp = recipe_client.post(format!("{}/api/recipe/{}", args.instance, args.id))
@@ -108,7 +113,7 @@ fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args = Arguments::parse();
     let tok = auth(&args);
 
@@ -116,7 +121,7 @@ fn main() {
 
     println!("Recipe: {}", recipe["name"]);
 
-    let path = Path::new(&args.printer_path);
+    let path = Path::new("/dev/usb/lp0");
     let driver = FileDriver::open(&path).unwrap();
     let mut printer = Printer::new(driver.clone(), Protocol::default(), None);
     printer.init().unwrap();
@@ -187,4 +192,5 @@ fn main() {
     printer.feed()?
         .print_cut()?;
 
+    Ok(())
 }
