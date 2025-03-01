@@ -11,7 +11,7 @@ use std::collections::HashMap;
 #[derive(Parser)]
 #[command(name = "recipe_printer")]
 struct Arguments {
-    /// Base link to Tandoor instance
+    /// Base link to Tandoor instance, with protocol - e.g. "https://recipes.example.com"
     instance: String,
     
     /// Recipe ID
@@ -24,7 +24,7 @@ struct Arguments {
     /// Password to authenticate with
     #[arg(short, long)]
     password: Option<String>,
-    
+
     /// Token to authenticate with
     #[arg(short, long)]
     token: Option<String>,
@@ -125,7 +125,7 @@ fn main() -> Result<()> {
 
     println!("Recipe: {}", recipe["name"]);
 
-    let path = Path::new("/dev/usb/lp0");
+    let path = Path::new(args.printer_path);
     let driver = FileDriver::open(&path).unwrap();
     let mut printer = Printer::new(driver.clone(), Protocol::default(), None);
     printer.init().unwrap();
