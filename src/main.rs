@@ -24,7 +24,7 @@ struct Arguments {
     /// Password to authenticate with
     #[arg(short, long)]
     password: Option<String>,
-
+    
     /// Token to authenticate with
     #[arg(short, long)]
     token: Option<String>,
@@ -32,6 +32,10 @@ struct Arguments {
     /// Printer path
     #[arg(long, default_value_t=String::from("/dev/usb/lp0"))]
     printer_path: String,
+
+    /// Print QR code link to recipe
+    #[arg(long)]
+    qr: bool,
 }
 
 fn auth(args: &Arguments) -> String {
@@ -187,6 +191,10 @@ fn main() -> Result<()> {
         println!("{}", step["instruction"].as_str().unwrap());
         printer.writeln(&format!("{}", step["instruction"].as_str().unwrap()))?;
         printer.feed()?;
+    }
+
+    if args.qr {
+        printer.qrcode(&format!("{}/view/recipe/{}", args.instance, args.id))?;
     }
     
     printer.feed()?
