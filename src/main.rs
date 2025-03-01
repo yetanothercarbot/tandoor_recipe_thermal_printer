@@ -108,7 +108,7 @@ fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
     }
 }
 
-fn main() -> Result<()> {
+fn main() {
     let args = Arguments::parse();
     let tok = auth(&args);
 
@@ -149,10 +149,12 @@ fn main() -> Result<()> {
             }
             for ingredient in ingredients {
                 let mut ingredient_str = String::from("- ");
+                let amount: f64;
                 
                 if ingredient["amount"].as_number().is_some() {
                     let amnt = ingredient["amount"].as_number().unwrap();
                     if amnt.is_f64() && amnt.as_f64().unwrap() > 0.0 {
+                        amount = amnt.as_f64().unwrap();
                         ingredient_str.push_str(&format!("{} ", &amnt));
                     }
                 }
@@ -166,6 +168,12 @@ fn main() -> Result<()> {
                     let food = ingredient["food"]["name"].as_str().unwrap();
                     ingredient_str.push_str(&format!("{} ", &food));
 
+                    if ingredient["note"].as_str().is_some() {
+                        let note = ingredient["note"].as_str().unwrap();
+                        println!("{}", &note);
+                        ingredient_str.push_str(&format!(" ({})", &note));
+                    }
+
                     println!("{}", ingredient_str);
                     printer.writeln(&ingredient_str)?;
                 }
@@ -175,11 +183,8 @@ fn main() -> Result<()> {
         printer.writeln(&format!("{}", step["instruction"].as_str().unwrap()))?;
         printer.feed()?;
     }
-
-    env_logger::init();
     
     printer.feed()?
         .print_cut()?;
 
-    Ok(())
 }
