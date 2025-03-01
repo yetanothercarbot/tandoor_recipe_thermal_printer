@@ -167,7 +167,6 @@ fn main() -> Result<()> {
                 if ingredient["unit"]["plural_name"].as_str().is_some() 
                     && (amount - 1.0).abs() > f64::EPSILON {
                     let pl_unit = ingredient["unit"]["plural_name"].as_str().unwrap();
-                    println!("Using plural unit.");
                     ingredient_str.push_str(&format!("{} ", &pl_unit));
                 }
 
