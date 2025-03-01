@@ -154,7 +154,7 @@ fn main() -> Result<()> {
             }
             for ingredient in ingredients {
                 let mut ingredient_str = String::from("- ");
-                let amount: f64;
+                let mut amount: f64 = 0.0;
                 
                 if ingredient["amount"].as_number().is_some() {
                     let amnt = ingredient["amount"].as_number().unwrap();
@@ -164,7 +164,17 @@ fn main() -> Result<()> {
                     }
                 }
 
-                if ingredient["unit"]["name"].as_str().is_some() {
+                if ingredient["unit"]["plural_name"].as_str().is_some() 
+                    && (amount - 1.0).abs() > f64::EPSILON {
+                    let pl_unit = ingredient["unit"]["plural_name"].as_str().unwrap();
+                    println!("Using plural unit.");
+                    ingredient_str.push_str(&format!("{} ", &pl_unit));
+                }
+
+                if ingredient["unit"]["name"].as_str().is_some() && (
+                    amount - 1.0 < f64::EPSILON
+                    || ingredient["unit"]["plural_name"].as_str().is_none()
+                    ) {
                     let unit = ingredient["unit"]["name"].as_str().unwrap();
                     ingredient_str.push_str(&format!("{} ", &unit));
                 }
@@ -175,7 +185,6 @@ fn main() -> Result<()> {
 
                     if ingredient["note"].as_str().is_some() {
                         let note = ingredient["note"].as_str().unwrap();
-                        println!("{}", &note);
                         ingredient_str.push_str(&format!(" ({})", &note));
                     }
 
