@@ -7,6 +7,7 @@ use serde_json::*;
 use serde_json::Value::Array;
 use clap::Parser;
 use std::collections::HashMap;
+use unidecode::unidecode;
 
 #[derive(Parser)]
 #[command(name = "recipe_printer")]
@@ -127,7 +128,7 @@ fn main() -> Result<()> {
     printer.init().unwrap();
     printer.bold(true)?
         .size(2, 2)?
-        .writeln(&format!("{}", recipe["name"].as_str().unwrap()))?
+        .writeln(&unidecode(recipe["name"].as_str().unwrap()))?
         .reset_size()?
         .bold(false)?;
 
@@ -182,18 +183,18 @@ fn main() -> Result<()> {
                     let food = ingredient["food"]["name"].as_str().unwrap();
                     ingredient_str.push_str(&format!("{} ", &food));
 
-                    if ingredient["note"].as_str().is_some() {
+                    if ingredient["note"].as_str().is_some() && ingredient["not"].as_str().unwrap().len() > 0 {
                         let note = ingredient["note"].as_str().unwrap();
                         ingredient_str.push_str(&format!(" ({})", &note));
                     }
 
                     println!("{}", ingredient_str);
-                    printer.writeln(&ingredient_str)?;
+                    printer.writeln(&unidecode(&ingredient_str))?;
                 }
             }
         }
         println!("{}", step["instruction"].as_str().unwrap());
-        printer.writeln(&format!("{}", step["instruction"].as_str().unwrap()))?;
+        printer.writeln(&unidecode(&format!("{}", step["instruction"].as_str().unwrap())))?;
         printer.feed()?;
     }
 

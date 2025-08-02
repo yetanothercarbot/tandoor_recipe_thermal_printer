@@ -756,12 +756,13 @@ dependencies = [
 
 [[package]]
 name = "recipe_printer"
-version = "0.1.0"
+version = "1.2.2"
 dependencies = [
  "clap",
  "escpos",
  "reqwest",
  "serde_json",
+ "unidecode",
 ]
 
 [[package]]
@@ -1141,6 +1142,12 @@ name = "unicode-ident"
 version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00e2473a93778eb0bad35909dff6a10d28e63f792f16ed15e404fca9d5eeedbe"
+
+[[package]]
+name = "unidecode"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "402bb19d8e03f1d1a7450e2bd613980869438e0666331be3e073089124aa1adc"
 
 [[package]]
 name = "untrusted"
