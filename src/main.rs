@@ -92,7 +92,7 @@ fn auth(args: &Arguments) -> String {
 fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
     let recipe_client = reqwest::blocking::Client::new();
 
-    let resp = recipe_client.post(format!("{}/api/recipe/{}", args.instance, args.id))
+    let resp = recipe_client.get(format!("{}/api/recipe/{}/", args.instance, args.id))
         .header("Authorization", format!("Bearer {tok}"))
         .send();
 
@@ -102,7 +102,7 @@ fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
                 let response = r.text().unwrap();
                 return serde_json::from_str(&response).expect("Malformed recipe");
             } else {
-                println!("Got HTTP failure - is Tandoor running?");
+                println!("Got HTTP error ({}) - is Tandoor running and accessible?", r.status());
                 exit(2);
             }
         }
