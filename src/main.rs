@@ -7,6 +7,7 @@ use serde_json::*;
 use serde_json::Value::Array;
 use clap::Parser;
 use std::collections::HashMap;
+use escpos::utils::JustifyMode::CENTER;
 use unidecode::unidecode;
 
 #[derive(Parser)]
@@ -199,6 +200,7 @@ fn main() -> Result<()> {
     }
 
     if args.qr {
+        printer.justify(CENTER)?;
         printer.qrcode(&format!("{}/view/recipe/{}", args.instance, args.id))?;
     }
     
