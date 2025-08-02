@@ -183,9 +183,11 @@ fn main() -> Result<()> {
                     let food = ingredient["food"]["name"].as_str().unwrap();
                     ingredient_str.push_str(&format!("{} ", &food));
 
-                    if ingredient["note"].as_str().is_some() && ingredient["not"].as_str().unwrap().len() > 0 {
-                        let note = ingredient["note"].as_str().unwrap();
-                        ingredient_str.push_str(&format!(" ({})", &note));
+                    if ingredient["note"].as_str().is_some() {
+                        if ingredient["not"].as_str().unwrap().len() > 0 {
+                            let note = ingredient["note"].as_str().unwrap();
+                            ingredient_str.push_str(&format!(" ({})", &note));
+                        }
                     }
 
                     println!("{}", ingredient_str);
