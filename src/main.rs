@@ -10,6 +10,15 @@ use std::collections::HashMap;
 use escpos::utils::JustifyMode::CENTER;
 use unidecode::unidecode;
 
+#[derive(clap::ValueEnum, Clone, PartialEq, Eq, Default)]
+enum IngredientDisplay {
+    #[default]
+    Both,
+    Summary,
+    Step,
+    None
+}
+
 #[derive(Parser)]
 #[command(name = "recipe_printer")]
 struct Arguments {
@@ -38,6 +47,10 @@ struct Arguments {
     /// Print QR code link to recipe
     #[arg(long)]
     qr: bool,
+
+    /// Customise how ingredients are displayed - as an aggregated list, per-step, both or none
+    #[arg(short, long, value_enum, default_value_t)]
+    ingredient_display: IngredientDisplay
 }
 
 fn auth(args: &Arguments) -> String {
@@ -148,7 +161,8 @@ fn main() -> Result<()> {
             .writeln(&format!("Step {}", step_no))?
             .bold(false)?;
 
-        if step["ingredients"].is_null() == false {
+        if (args.ingredient_display == IngredientDisplay::Both || args.ingredient_display == IngredientDisplay::Step)
+            && step["ingredients"].is_null() == false {
             let ingredients;
             match &step["ingredients"] {
                 Array(val) => {ingredients = val},
