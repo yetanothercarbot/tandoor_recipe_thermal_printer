@@ -149,6 +149,10 @@ fn main() -> Result<()> {
                 .reset_size()?
                 .bold(false)?;
 
+            if args.verbose >= 2 {
+                println!("{}", format_text(&recipe.name, (args.columns/2) as usize));
+            }
+
             if args.ingredient_display == IngredientDisplay::Both || args.ingredient_display == IngredientDisplay::Summary {
                 printer.bold(true)?
                     .underline(UnderlineMode::Single)?
@@ -201,7 +205,10 @@ fn main() -> Result<()> {
                     }
                 }
 
-                println!(" {}", format_text(&step.instruction, args.columns as usize));
+                if args.verbose >= 2 {
+                    println!(" {}", format_text(&step.instruction, args.columns as usize));
+                }
+
 
                 printer.writeln(&format_text(&step.instruction, args.columns as usize))?;
                 printer.feed()?;

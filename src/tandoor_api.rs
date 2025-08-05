@@ -63,18 +63,36 @@ impl TandoorIngredient {
     }
     pub(crate) fn pretty_print(&self) -> String {
         let mut output = String::from("- ");
+
         // Amount
         if self.amount > 0.0 {
-            output.push_str(&format!("{}", self.amount));
+            let leftover = (self.amount * 100f64).round() as u64 % 100;
+
+            let rounded: String;
+            if self.amount >= 1f64 {
+                rounded = format!("{} ", self.amount.round())
+            } else {
+                rounded = String::new();
+            }
+
+            match leftover {
+                13 => output.push_str(&format!("{}1/8 ", rounded)),
+                25 => output.push_str(&format!("{}1/4 ", rounded)),
+                33 => output.push_str(&format!("{}1/3 ", rounded)),
+                50 => output.push_str(&format!("{}1/2 ", rounded)),
+                67 => output.push_str(&format!("{}2/3 ", rounded)),
+                75 => output.push_str(&format!("{}3/4 ", rounded)),
+                _ => output.push_str(&format!("{} ", self.amount)),
+            }
         }
 
         // Unit
         if self.unit.is_some() && self.amount > 0.0 {
             let unit = self.unit.as_ref().unwrap();
             if unit.plural_name.is_some() && (self.amount - 1.0) > f64::EPSILON {
-                output.push_str(&format!(" {}", unit.plural_name.as_ref().unwrap()));
+                output.push_str(&format!("{} ", unit.plural_name.as_ref().unwrap()));
             } else {
-                output.push_str(&format!(" {}", unit.name));
+                output.push_str(&format!("{} ", unit.name));
             }
         }
 
@@ -82,9 +100,9 @@ impl TandoorIngredient {
         if self.food.is_some() {
             let food = self.food.as_ref().unwrap();
             if food.plural_name.is_some() && (self.amount - 1.0) > f64::EPSILON {
-                output.push_str(&format!(" {}", food.plural_name.as_ref().unwrap()));
+                output.push_str(&format!("{}", food.plural_name.as_ref().unwrap()));
             } else {
-                output.push_str(&format!(" {}", food.name));
+                output.push_str(&format!("{}", food.name));
             }
         }
 
