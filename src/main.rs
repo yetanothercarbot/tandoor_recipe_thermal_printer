@@ -56,6 +56,10 @@ struct Arguments {
     #[arg(short, long, value_enum, default_value_t)]
     ingredient_display: IngredientDisplay,
 
+    /// Add number of servings and cooking time (if relevant) to printout
+    #[arg(short, long)]
+    stats: bool,
+
     /// Print QR code link to recipe
     #[arg(long)]
     qr: bool,
@@ -147,7 +151,14 @@ fn main() -> Result<()> {
                 .size(2, 2)?
                 .writeln(&format_text(&recipe.name, (args.columns/2) as usize))?
                 .reset_size()?
-                .bold(false)?;
+                .bold(false)?
+                .feed()?;
+
+            if args.stats {
+                printer.writeln(&recipe.get_servings())?
+                    .writeln(&recipe.get_duration())?;
+            }
+
 
             if args.verbose >= 2 {
                 println!("{}", format_text(&recipe.name, (args.columns/2) as usize));

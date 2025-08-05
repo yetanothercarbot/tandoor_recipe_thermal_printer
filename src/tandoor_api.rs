@@ -54,6 +54,24 @@ impl TandoorRecipe {
         ingredients.sort_by_key(|x| x.food.as_ref().unwrap().id);
         ingredients
     }
+
+    pub(crate) fn get_servings(&self) -> String {
+        format!("{} {}", self.servings, if self.servings_text.is_empty() {"servings"} else {&self.servings_text})
+    }
+
+    pub(crate) fn get_duration(&self) -> String {
+        let mut output = String::new();
+
+        if self.working_time > 0 {
+            output.push_str(&format!("{} min working time\n", self.working_time));
+        }
+
+        if self.waiting_time > 0 {
+            output.push_str(&format!("{} min waiting time\n", self.waiting_time));
+        }
+
+        output
+    }
 }
 
 impl TandoorIngredient {
