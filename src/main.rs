@@ -1,225 +1,235 @@
+mod tandoor_api;
+
+use std::io::{stdin, Read};use indicatif::ProgressBar;
 use escpos::printer::Printer;
 use escpos::utils::*;
 use escpos::{driver::*, errors::Result};
 use std::path::Path;
 use std::process::exit;
-use serde_json::*;
-use serde_json::Value::Array;
 use clap::Parser;
-use std::collections::HashMap;
-use escpos::utils::JustifyMode::CENTER;
 use unidecode::unidecode;
+use crate::tandoor_api::TandoorRecipe;
 
 #[derive(clap::ValueEnum, Clone, PartialEq, Eq, Default)]
 enum IngredientDisplay {
-    #[default]
     Both,
     Summary,
+    #[default]
     Step,
     None
 }
 
+#[derive(clap::ValueEnum, Clone, PartialEq, Eq, Default)]
+enum CutMode {
+    None,
+    Pause,
+    Partial,
+    #[default]
+    Full
+}
+
 #[derive(Parser)]
-#[command(name = "recipe_printer")]
+#[command(version, name = "recipe_printer")]
 struct Arguments {
     /// Base link to Tandoor instance, with protocol - e.g. "https://recipes.example.com"
     instance: String,
-    
+
+    /// Tandoor token to authenticate with
+    token: String,
+
     /// Recipe ID
-    id: u16,
+    id: Vec<u32>,
 
-    /// Username to authenticate with
-    #[arg(short, long)]
-    username: Option<String>,
+    /// Dry run (retrieve recipe but do not print)
+    #[arg(long)]
+    dry_run: bool,
 
-    /// Password to authenticate with
-    #[arg(short, long)]
-    password: Option<String>,
-
-    /// Token to authenticate with
-    #[arg(short, long)]
-    token: Option<String>,
+    /// Print more debugging information
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 
     /// Printer path
-    #[arg(long, default_value_t=String::from("/dev/usb/lp0"))]
+    #[arg(short, long, default_value_t=String::from("/dev/usb/lp0"))]
     printer_path: String,
+
+    /// Customise how ingredients are displayed - as an aggregated list, per-step, both or none
+    #[arg(short, long, value_enum, default_value_t)]
+    ingredient_display: IngredientDisplay,
 
     /// Print QR code link to recipe
     #[arg(long)]
     qr: bool,
 
-    /// Customise how ingredients are displayed - as an aggregated list, per-step, both or none
-    #[arg(short, long, value_enum, default_value_t)]
-    ingredient_display: IngredientDisplay
+    /// Select type of cut at end of recipe (no cut, pause for printers with no automatic cutter, partial cut or full cut)
+    #[arg(long, value_enum, default_value_t)]
+    cut_mode: CutMode,
+
+    /// Width of paper, in characters. Used for word wrapping (use 0 to revert to the printer's built-in wrapping)
+    #[arg(long, default_value_t=42)]
+    columns: u32,
+
 }
 
-fn auth(args: &Arguments) -> String {
-    if args.token.is_some() {
-        return args.token.clone().unwrap();
-    }
-
-    if args.username.is_some() && args.password.is_some() {
-        // Retrieve token
-        let mut auth_deets = HashMap::new();
-        auth_deets.insert("username", args.username.clone().unwrap());
-        auth_deets.insert("password", args.password.clone().unwrap());
-
-        println!("Signing in with {:?} / {:?}", auth_deets.get("username"), auth_deets.get("password"));
-
-        println!("Requesting {}/api-token/auth/", args.instance);
-
-        let auth_client = reqwest::blocking::Client::new();
-
-        let resp = auth_client.post(format!("{}/api-token-auth/", args.instance))
-            .json(&auth_deets)
-            .send();
-        
-        match resp {
-            Ok(r) => {
-                if r.status().is_success() {
-                    let response: String = r.text().unwrap();
-                    let authorisation: Value = serde_json::from_str(&response).expect("Malformed authorisation");
-                    println!("Received token {}", &authorisation["token"].as_str().unwrap());
-                    return authorisation["token"].as_str().unwrap().to_string();
-                } else {
-                    println!("Unable to authenticate!");
-                    exit(2);
-                }
-                // println!("{}", r.json().expect("No body")["token"]);
-            },
-            Err(e) => {
-                println!("Network/Auth Error: {}", e);
-                exit(2);
-            }
-        }
-        
-    }
-
-    if args.username.is_none() || args.password.is_none() {
-        println!("Please provide username and password!");
-        exit(1);
-    }
-
-    println!("Please provide at least one authentication method!");
-    exit(1);
-}
-
-fn retrieve_recipe(args: &Arguments, tok: String) -> Value {
+fn retrieve_recipe(instance: &str, token: &str, id: &u32) -> TandoorRecipe {
     let recipe_client = reqwest::blocking::Client::new();
 
-    let resp = recipe_client.get(format!("{}/api/recipe/{}/", args.instance, args.id))
-        .header("Authorization", format!("Bearer {tok}"))
+    let resp = recipe_client.get(format!("{instance}/api/recipe/{id}/"))
+        .header("Authorization", format!("Bearer {token}"))
         .send();
 
     match resp {
         Ok(r) => {
             if r.status().is_success() {
                 let response = r.text().unwrap();
-                return serde_json::from_str(&response).expect("Malformed recipe");
+                serde_json::from_str(&response).expect("Malformed recipe")
             } else {
-                println!("Got HTTP error ({}) - is Tandoor running and accessible?", r.status());
+                println!("Recipe {id}: got HTTP error ({}) - is Tandoor running and accessible?", r.status());
                 exit(2);
             }
         }
         Err(e) => {
-            println!("Network/Auth Error: {}", e);
+            println!("Network/Auth Error: {e}");
             exit(2);
         }
     }
 }
 
+fn format_text(input: &str, width: usize) -> String {
+    if width == 0 {
+        unidecode(input)
+    } else {
+        textwrap::fill(&unidecode(input), width)
+    }
+}
+
 fn main() -> Result<()> {
     let args = Arguments::parse();
-    let tok = auth(&args);
+    let mut recipes: Vec<TandoorRecipe> = Vec::new();
 
-    let recipe = retrieve_recipe(&args, tok);
+    let bar_style = indicatif::ProgressStyle::with_template("{msg} {wide_bar} {pos}/{len}").unwrap();
 
-    println!("Recipe: {}", recipe["name"]);
-
-    let path = Path::new(&args.printer_path);
-    let driver = FileDriver::open(&path).unwrap();
-    let mut printer = Printer::new(driver.clone(), Protocol::default(), None);
-    printer.init().unwrap();
-    printer.bold(true)?
-        .size(2, 2)?
-        .writeln(&unidecode(recipe["name"].as_str().unwrap()))?
-        .reset_size()?
-        .bold(false)?;
-
-    let steps;
-    match &recipe["steps"] {
-        Array(val) => {steps = val},
-        _ => {exit(3)}
+    let download_bar = ProgressBar::new(args.id.len() as u64);
+    download_bar.set_style(bar_style.clone());
+    download_bar.set_message("Retrieving recipes");
+    for id in &args.id {
+        recipes.push(retrieve_recipe(&args.instance, &args.token, id));
+        download_bar.inc(1);
     }
+    download_bar.finish_with_message("Recipes retrieved");
 
-    let mut step_no = 0;
-    for step in steps {
-        step_no += 1;
-        println!("--> Step {}", step_no);
-
-        printer.bold(true)?
-            .writeln(&format!("Step {}", step_no))?
-            .bold(false)?;
-
-        if (args.ingredient_display == IngredientDisplay::Both || args.ingredient_display == IngredientDisplay::Step)
-            && step["ingredients"].is_null() == false {
-            let ingredients;
-            match &step["ingredients"] {
-                Array(val) => {ingredients = val},
-                _ => {exit(2)}
-            }
-            for ingredient in ingredients {
-                let mut ingredient_str = String::from("- ");
-                let mut amount: f64 = 0.0;
-                
-                if ingredient["amount"].as_number().is_some() {
-                    let amnt = ingredient["amount"].as_number().unwrap();
-                    if amnt.is_f64() && amnt.as_f64().unwrap() > 0.0 {
-                        amount = amnt.as_f64().unwrap();
-                        ingredient_str.push_str(&format!("{} ", &amnt));
-                    }
-                }
-
-                if ingredient["unit"]["plural_name"].as_str().is_some() 
-                    && (amount - 1.0).abs() > f64::EPSILON {
-                    let pl_unit = ingredient["unit"]["plural_name"].as_str().unwrap();
-                    ingredient_str.push_str(&format!("{} ", &pl_unit));
-                }
-
-                if ingredient["unit"]["name"].as_str().is_some() && (
-                    amount - 1.0 < f64::EPSILON
-                    || ingredient["unit"]["plural_name"].as_str().is_none()
-                    ) {
-                    let unit = ingredient["unit"]["name"].as_str().unwrap();
-                    ingredient_str.push_str(&format!("{} ", &unit));
-                }
-
-                if ingredient["food"]["name"].as_str().is_some() {
-                    let food = ingredient["food"]["name"].as_str().unwrap();
-                    ingredient_str.push_str(&format!("{} ", &food));
-
-                    if ingredient["note"].as_str().is_some() && ingredient["note"].as_str().unwrap().len() > 0 {
-                        let note = ingredient["note"].as_str().unwrap();
-                        ingredient_str.push_str(&format!(" ({})", &note));
-                    }
-
-                    println!("{}", ingredient_str);
-                    printer.writeln(&unidecode(&ingredient_str))?;
-                }
-            }
+    if args.verbose >= 1 {
+        println!("Recipes retrieved:");
+        for recipe in &recipes {
+            println!("Recipe {}: {} steps", recipe.name, recipe.steps.len());
         }
-        println!("{}", step["instruction"].as_str().unwrap());
-        printer.writeln(&unidecode(&format!("{}", step["instruction"].as_str().unwrap())))?;
-        printer.feed()?;
+        println!("---");
     }
 
-    if args.qr {
-        printer.justify(CENTER)?;
-        printer.qrcode(&format!("{}/view/recipe/{}", args.instance, args.id))?;
-    }
-    
-    printer.feed()?
-        .print_cut()?;
+    if !args.dry_run {
+        let path = Path::new(&args.printer_path);
+        let driver = FileDriver::open(path)?;
+        let mut printer = Printer::new(driver, Protocol::default(), None);
+        printer.init()?;
 
+        let print_bar = ProgressBar::new(args.id.len() as u64);
+        print_bar.set_style(bar_style.clone());
+
+        for recipe in &recipes {
+            if args.verbose >= 1 {
+                println!("Printing {}", recipe.name);
+            }
+            print_bar.set_message("Printing...");
+            print_bar.inc(1);
+
+            printer.justify(JustifyMode::LEFT)?;
+
+            printer.bold(true)?
+                .size(2, 2)?
+                .writeln(&format_text(&recipe.name, (args.columns/2) as usize))?
+                .reset_size()?
+                .bold(false)?;
+
+            if args.ingredient_display == IngredientDisplay::Both || args.ingredient_display == IngredientDisplay::Summary {
+                printer.bold(true)?
+                    .underline(UnderlineMode::Single)?
+                    .writeln("Ingredients")?
+                    .bold(false)?
+                    .underline(UnderlineMode::None)?;
+
+                for ingredient in recipe.get_all_ingredients() {
+                    if ingredient.include() {
+                        printer.writeln(&format_text(&ingredient.pretty_print(), args.columns as usize))?;
+                    }
+                }
+                printer.feed()?;
+            }
+
+            let mut step_no: u32 = 0;
+            for step in &recipe.steps {
+                step_no += 1;
+
+                let mut heading = format!("Step {step_no}");
+                if !step.name.is_empty() {
+                    heading.push_str(&format!(": {}", step.name));
+                }
+
+                printer.bold(true)?
+                    .underline(UnderlineMode::Single)?
+                    .writeln(&heading)?
+                    .bold(false)?
+                    .underline(UnderlineMode::None)?;
+
+                if args.verbose >= 2 {
+                    print!("{heading}");
+                }
+
+                if step.time != 0 {
+                    printer.justify(JustifyMode::RIGHT)?;
+                    printer.writeln(&format!("({} min)", step.time))?;
+                    printer.justify(JustifyMode::LEFT)?;
+
+                    if args.verbose >= 2 {
+                        print!(" ({} min)", step.time);
+                    }
+                }
+
+                if args.ingredient_display == IngredientDisplay::Both || args.ingredient_display == IngredientDisplay::Step {
+                    for ingredient in &step.ingredients {
+                        if ingredient.include() {
+                            printer.writeln(&format_text(&ingredient.pretty_print(), args.columns as usize))?;
+                        }
+                    }
+                }
+
+                println!(" {}", format_text(&step.instruction, args.columns as usize));
+
+                printer.writeln(&format_text(&step.instruction, args.columns as usize))?;
+                printer.feed()?;
+            }
+
+            if args.qr {
+                printer.justify(JustifyMode::CENTER)?;
+                printer.qrcode(&format!("{}/recipe/{}", args.instance, recipe.id))?;
+                printer.justify(JustifyMode::LEFT)?;
+            }
+
+            printer.feed()?;
+
+            match args.cut_mode {
+                CutMode::None => (),
+                CutMode::Partial => { printer.partial_cut()?;},
+                CutMode::Full => { printer.cut()?; },
+                CutMode::Pause => {
+                    print_bar.set_message("Paused. Tear off recipe and press ENTER to continue");
+                    // println!("Paused. Tear off recipe and press ENTER to continue");
+                    stdin().read(&mut [0])?;
+                }
+            }
+
+            printer.print()?;
+
+        }
+        print_bar.finish_with_message("Printing complete.");
+    }
     Ok(())
 }
