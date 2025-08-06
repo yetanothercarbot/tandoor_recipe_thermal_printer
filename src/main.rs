@@ -217,11 +217,11 @@ fn main() -> Result<()> {
                 }
 
                 if args.verbose >= 2 {
-                    println!(" {}", format_text(&step.instruction, args.columns as usize));
+                    println!(" {}", format_text(&step.instruction(), args.columns as usize));
                 }
 
 
-                printer.writeln(&format_text(&step.instruction, args.columns as usize))?;
+                printer.writeln(&format_text(&step.instruction(), args.columns as usize))?;
                 printer.feed()?;
             }
 

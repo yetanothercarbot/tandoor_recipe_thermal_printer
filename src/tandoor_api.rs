@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 pub struct TandoorRecipe {
     pub id: u32,
     pub name: String,
-    pub working_time: u32,
-    pub waiting_time: u32,
-    pub servings: u32,
-    pub servings_text: String,
+    pub working_time: Option<u32>,
+    pub waiting_time: Option<u32>,
+    pub servings: Option<u32>,
+    pub servings_text: Option<String>,
     pub steps: Vec<TandoorStep>
 }
 
@@ -16,7 +16,8 @@ pub struct TandoorStep {
     pub instruction: String,
     pub ingredients: Vec<TandoorIngredient>,
     pub name: String,
-    pub time: u32
+    pub time: u32,
+    pub step_recipe_data: Option<TandoorRecipe>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -56,19 +57,44 @@ impl TandoorRecipe {
     }
 
     pub(crate) fn get_servings(&self) -> String {
-        format!("{} {}", self.servings, if self.servings_text.is_empty() {"servings"} else {&self.servings_text})
+        let mut output = String::new();
+        if self.servings.is_some() {
+            output.push_str(&format!("{} ", self.servings.unwrap()));
+            if self.servings_text.as_ref().is_none() || self.servings_text.as_ref().unwrap().is_empty() {
+                output.push_str("servings");
+            } else {
+                output.push_str(&format!("{}", self.servings_text.as_ref().unwrap()));
+            }
+        }
+        // format!("{} {}", self.servings, if self.servings_text.is_none() || self.servings_text.as_ref().unwrap().is_empty() {"servings"} else {self.servings_text.as_ref().unwrap()})
+        output
     }
 
     pub(crate) fn get_duration(&self) -> String {
         let mut output = String::new();
 
-        if self.working_time > 0 {
-            output.push_str(&format!("{} min working time\n", self.working_time));
+        if self.working_time.is_some() && self.working_time.unwrap() > 0 {
+            output.push_str(&format!("{} min working time\n", self.working_time.unwrap()));
         }
 
-        if self.waiting_time > 0 {
-            output.push_str(&format!("{} min waiting time\n", self.waiting_time));
+        if self.waiting_time.is_some() && self.waiting_time.unwrap() > 0 {
+            output.push_str(&format!("{} min waiting time\n", self.waiting_time.unwrap()));
         }
+
+        output
+    }
+}
+
+impl TandoorStep {
+    pub(crate) fn instruction(&self) -> String {
+        let mut output = String::new();
+        if self.step_recipe_data.is_some() {
+            let subrecipe_name = &self.step_recipe_data.as_ref().unwrap().name;
+            let subrecipe_id = &self.step_recipe_data.as_ref().unwrap().id;
+            output.push_str(&format!("Create recipe \"{}\". ", subrecipe_name));
+            println!("Note: Recipe depends on other recipe ({subrecipe_name} - ID: {subrecipe_id})");
+        }
+        output.push_str(&self.instruction);
 
         output
     }
